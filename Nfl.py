@@ -16,34 +16,112 @@ def isValidName(name):
             return name
     return False
 
+def isTeamInGame(name, gameNumber):
+    temp = name.split()
+    name = ""
+    for i in range(0,len(temp)):
+        temp[i] = temp[i].capitalize()
+        name += temp[i] + " "
+    name = name.strip()
+    for team in games[gameNumber]:
+        if name in team:
+            name = team
+            return name
+    return False
+
+#pulls games this week from foxsports.com. Date handling is done by website
+games = [] 
+def getGamesThisWeek():
+    page = urllib2.urlopen("http://www.foxsports.com/nfl/schedule")
+    source = page.read()
+    start = source.find("gameDetails")
+    while start > 0:
+        source = source[start:]
+        game = [] #list of both teams 
+        for i in range(0, 2):
+            start = source.find("teamInfo")
+            source = source[start:]
+            start = source.find("<span>")
+            source = source[start:]
+            source = source[len("<span>"):]
+            start = source.find("<span>")
+            source = source[(start+ len("<span>")):]
+            end = source.find("</span>")
+            game.append(source[:end:])
+        games.append(game)
+        start = source.find("gameDetails")
+
+
+getGamesThisWeek()
 while(True):
-    #prompts the user for team1
-    team1Name = raw_input("Enter a team ")
-    
-    #waits until valid team1 name is entered
-    while not isValidName(team1Name):
-        team1Name = raw_input("Enter a valid team name ")
-    
-    team1Name = isValidName(team1Name)    
-    
-    #creates team1 object
-    team1 = Team(team1Name)
-    
-    #prompts the user for team
-    team2Name = raw_input("Enter the opposing team ")
-    if isValidName(team2Name):
-        team2Name = isValidName(team2Name)
-    
-    #waits until valid team2 name is entered and not the same as team1
-    while team1Name == team2Name or not isValidName(team2Name):
-        while not isValidName(team2Name):
-            team2Name = raw_input("Enter the opposing team ")
-        while team1Name == team2Name:
-            team2Name = raw_input("Enter a different opposing team ")
+
+    realGame = raw_input("Do you want to view a game this week? (y/n) ")
+    realGame = realGame.lower()
+
+    #waits until the user enters a valid response
+    while True:
+        if realGame == "y":
+            realGame = True
+            break
+        elif realGame == "n":
+            realGame = False
+            break
+        else:
+            realGame = raw_input("Do you want to view a game this week? (y/n) ")
+            realGame = realGame.lower()  
+
+    if realGame:
+        for i in range(0,len(games)):
+            print
+            for j in range(0,2):
+                for team in teams:
+                    if games[i][j] in team:
+                        games[i][j] = team
+                if j==0:
+                    print "%d. %s vs." %(i+1,games[i][j]),
+                else:
+                    print games[i][j]
+            print
+
+        gameNum = raw_input("Pick a game (1-16) ")
+        while not gameNum.isdigit() or (int(gameNum)  > 16 or int(gameNum) < 1):
+            gameNum = raw_input("Enter a game between 1 and 16 ")
+
+        gameNum = int(gameNum)
+        gameNum = gameNum-1
+        
+        team1 = Team(games[gameNum][0])
+        team2 = Team(games[gameNum][1])
+
+
+    else:
+        #prompts the user for team1
+        team1Name = raw_input("Enter a team ")
+        
+        #waits until valid team1 name is entered
+        while not isValidName(team1Name):
+            team1Name = raw_input("Enter a valid team name ")
+        
+        team1Name = isValidName(team1Name)    
+        
+        #creates team1 object
+        team1 = Team(team1Name)
+        
+        #prompts the user for team
+        team2Name = raw_input("Enter the opposing team ")
+        if isValidName(team2Name):
             team2Name = isValidName(team2Name)
+        
+        #waits until valid team2 name is entered and not the same as team1
+        while team1Name == team2Name or not isValidName(team2Name):
+            while not isValidName(team2Name):
+                team2Name = raw_input("Enter the opposing team ")
+            while team1Name == team2Name:
+                team2Name = raw_input("Enter a different opposing team ")
+                team2Name = isValidName(team2Name)
     
-    #creates team2 object
-    team2 = Team(team2Name)
+        #creates team2 object
+        team2 = Team(team2Name)
     
     checkPointSpread = raw_input("Do you want the point spread to be accounted for in this prediction? (y/n) ")
     checkPointSpread = checkPointSpread.lower()
@@ -62,14 +140,17 @@ while(True):
     
     if checkPointSpread:
         favoredTeam = raw_input("Enter the favored team ")
-        
-        while not (favoredTeam == team1Name or favoredTeam == team2Name) or not isValidName(team2Name):
-            while not isValidName(favoredTeam):
-                favoredTeam = raw_input("Enter the favored team ")
-            favoredTeam = isValidName(favoredTeam)
-            while not (favoredTeam == team1Name or favoredTeam == team2Name):
-                favoredTeam = raw_input("Enter a team playing ")
+        if not realGame:
+            while not (favoredTeam == team1Name or favoredTeam == team2Name) or not isValidName(team2Name):
+                while not isValidName(favoredTeam):
+                    favoredTeam = raw_input("Enter the favored team ")
                 favoredTeam = isValidName(favoredTeam)
+                while not (favoredTeam == team1Name or favoredTeam == team2Name):
+                    favoredTeam = raw_input("Enter a team playing ")
+                    favoredTeam = isValidName(favoredTeam)
+        else:
+            while not isTeamInGame(favoredTeam, gameNum):
+                favoredTeam = raw_input("Enter the favored team " )
         
         numPointsMustWinBy = raw_input("Enter the number of points they are giving up ")
         while not isinstance(numPointsMustWinBy, float):
@@ -111,7 +192,10 @@ while(True):
         if favoredTeam == winTeam.name and predictedScore > numPointsMustWinBy:
             print "Pick the %s." %(favoredTeam),
         elif predictedScore == numPointsMustWinBy:
-            print "Pick the home team.",
+            if not realGame:
+                print "Pick the home team.",
+            else:
+                print "Pick the %s." %(team2.name),
         else:
             print "Pick the %s." %(underdogTeam),
 
