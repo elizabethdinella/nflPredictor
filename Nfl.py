@@ -151,7 +151,9 @@ while(True):
         else:
             while not isTeamInGame(favoredTeam, gameNum):
                 favoredTeam = raw_input("Enter the favored team " )
-        
+
+            favoredTeam = isTeamInGame(favoredTeam, gameNum)
+
         numPointsMustWinBy = raw_input("Enter the number of points they are giving up ")
         while not isinstance(numPointsMustWinBy, float):
             try:
